@@ -1,0 +1,17 @@
+# Ignore node_modules directory
+node_modules
+
+# Ignore build output directory
+dist
+
+# Ignore local environment files
+.env
+
+# Ignore Dockerfile and .dockerignore
+Dockerfile
+.dockerignore
+
+# Ignore other unnecessary files
+.git
+.gitignore
+README.md
