@@ -99,7 +99,7 @@ export class ChatService {
       };
 
       // TODO: REMOVE AND REPLACE WITH REAL CORE JOB
-      await new Promise((resolve) => setTimeout(resolve, 15000));
+      await new Promise((resolve) => setTimeout(resolve, 7000));
 
       const chat = await this.chatModel
         .findOne({ id: this.loadingMessage?.chatId })
