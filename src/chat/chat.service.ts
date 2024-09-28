@@ -41,13 +41,16 @@ export class ChatService {
     return createHash('sha256').update(data).digest('hex');
   }
 
-  private anyMessageWithId(chatId: string, messageId: string) {
-    return this.chatModel
+  private async anyMessageWithId(chatId: string, messageId: string) {
+    return await this.chatModel
       .findOne({
         id: chatId,
-        'messages.id': messageId,
+        'globalMessages.id': messageId,
       })
-      .exec();
+      .exec() || await this.chatModel.findOne({
+        id: chatId,
+        'formMessages.id': messageId,
+      });
   }
 
   async sendMessage(reqHash: string | undefined, message: string, type: ChatType) {
@@ -64,7 +67,21 @@ export class ChatService {
         sender: MessageSender.USER,
         message,
       };
-      await this.chatModel.create({ id, hash, messages: [msg], form: '' });
+      const welcomeFormMsg: Message = {
+        id: uuid(),
+        sender: MessageSender.CHAT,
+        message: 'Proszę opisz swoją',
+      };
+
+      while (true) {
+        welcomeFormMsg.id = uuid();
+        if (msg.id !== welcomeFormMsg.id) break;
+      }
+
+      if (type === ChatType.GLOBAL)
+        await this.chatModel.create({ id, hash, globalMessages: [msg], formMessages: [welcomeFormMsg], form: '' });
+      else
+        await this.chatModel.create({ id, hash, globalMessages: [], formMessages: [welcomeFormMsg, msg], form: '' });
     } else {
       hash = reqHash;
       const chat = await this.chatModel
