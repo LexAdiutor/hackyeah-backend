@@ -28,7 +28,8 @@ export class ChatService {
   private async existsHash(hash: string): Promise<boolean> {
     return !!(await this.chatModel
       .findOne({ hash })
-      .select('-messages')
+      .select('-globalMessages')
+      .select('-formMessages')
       .exec());
   }
 
@@ -63,7 +64,7 @@ export class ChatService {
         sender: MessageSender.USER,
         message,
       };
-      await this.chatModel.create({ id, hash, messages: [msg], form: '', type });
+      await this.chatModel.create({ id, hash, messages: [msg], form: '' });
     } else {
       hash = reqHash;
       const chat = await this.chatModel
@@ -88,7 +89,11 @@ export class ChatService {
         message,
       };
 
-      chat.messages.push(msg);
+      if (type === ChatType.GLOBAL)
+        chat.globalMessages.push(msg);
+      else
+        chat.formMessages.push(msg);
+
       await chat.save();
     }
 
@@ -119,7 +124,10 @@ export class ChatService {
         message: 'Hello from chat',
       };
 
-      chat.messages.push(chatMsg);
+      if (type === ChatType.GLOBAL)
+        chat.globalMessages.push(chatMsg);
+      else
+        chat.formMessages.push(chatMsg);
       await chat.save();
 
       this.loadingMessage = null;
