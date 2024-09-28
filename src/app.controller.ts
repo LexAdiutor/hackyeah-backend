@@ -1,11 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
-import { FORM } from './data';
+import { FORM } from './form1';
 
 @Controller()
 export class AppController {
   constructor() {}
 
-  @Get('templateForm')
+  @Get('form1')
   getTemplateForm(): any {
     return FORM;
   }
