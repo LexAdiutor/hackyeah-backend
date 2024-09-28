@@ -26,13 +26,13 @@ export class Chat extends Document {
   hash: string;
 
   @Prop({ type: [Object], default: [], required: true })
-  messages: Message[];
+  globalMessages: Message[];
+
+  @Prop({ type: [Object], default: [], required: true })
+  formMessages: Message[];
 
   @Prop({ type: String, required: false })
   form: string;
-
-  @Prop({ type: String, required: true, default: ChatType.GLOBAL })
-  type: ChatType;
 }
 
 export const ChatSchema = SchemaFactory.createForClass(Chat);
