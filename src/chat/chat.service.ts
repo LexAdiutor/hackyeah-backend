@@ -145,6 +145,6 @@ export class ChatService {
       throw new NotFoundException('Chat not found');
     }
 
-    return this.chatModel.findOne({ hash: reqHash }).exec();
+    return this.chatModel.findOne({ hash: reqHash }).select('-id').select('-_id').exec();
   }
 }

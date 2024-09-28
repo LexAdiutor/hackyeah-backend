@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ChatModule } from './chat/chat.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { MongooseModule } from '@nestjs/mongoose';
       { dbName: 'hackyeah' },
     ),
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule {}
