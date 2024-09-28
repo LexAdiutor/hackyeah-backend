@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { FORM } from './form1';
+import { FORM } from './data/forms/form1';
 
 @Controller()
 export class AppController {
