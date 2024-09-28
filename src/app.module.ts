@@ -4,6 +4,8 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from './auth/auth.module';
+import { ConventerModule } from './conventer/conventer.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { MongooseModule } from '@nestjs/mongoose';
       { dbName: 'hackyeah' },
     ),
     UsersModule,
+    AuthModule,
+    ConventerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
