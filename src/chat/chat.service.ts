@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Chat, ChatType, Message, MessageSender } from './models/chat.model';
 import { Model } from 'mongoose';
@@ -155,10 +155,30 @@ export class ChatService {
         msgId,
       };
 
-      // TODO: REMOVE AND REPLACE WITH REAL CORE JOB
+      let is_pcc: Boolean = false;
+      let backMessage = 'Brak odpowiedzi.';
 
-      const response = message.trim() === 'ok' ? 'PCC3' : 'NO';
-      let backMessage = 'każda wiadomość';
+      try {
+        const response = await fetch(`${process.env.CORE_URL}/sendMichalMsg`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            msg_id: this.loadingMessage.chatId,
+            message,
+          }),
+        });
+
+        const data = await response.json();
+        is_pcc = data?.is_pcc === 'pcc';
+
+        if (data?.message)
+          backMessage = data.message;
+      } catch {
+        this.loadingMessage = null;
+        throw new ConflictException('Something went wrong');
+      }
 
       await new Promise((resolve) => setTimeout(resolve, 7000));
 
@@ -168,10 +188,10 @@ export class ChatService {
 
       if (isFirstFormMessage) {
         backMessage =
-          response === 'NO'
+          !is_pcc
             ? 'Przepraszamy, ale nie wspieramy wypełniania wniosku dla tego podatku.'
             : 'Zauważyłem, że musisz wypełnić formularz PCC3. Proszę o wypełnienie danych, które wyświetlają Ci się po prawej stronie.';
-        if (response === 'PCC3') {
+        if (is_pcc) {
           chat.form = FORM2
           chat.formName = 'FORM2';
         };
