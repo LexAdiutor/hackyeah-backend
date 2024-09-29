@@ -8,6 +8,7 @@ import { Queue } from 'bull';
 import { QueueService } from './queue.service';
 import { FORM2 } from 'src/data/forms/form2';
 import { getFields } from 'src/data/forms/fields';
+import { FORM } from 'src/data/forms/form1';
 
 @Injectable()
 export class ChatService {
@@ -179,6 +180,9 @@ export class ChatService {
 
         if (data?.fields && chat) {
           data.fields.forEach(({name, value}) => chat.fields[name] = value);
+
+          chat.form = FORM;
+          chat.formName = 'FORM1';
 
           await chat.save();
         }
