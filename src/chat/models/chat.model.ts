@@ -43,7 +43,7 @@ export class Chat extends Document {
   @Prop({ type: Boolean, required: false })
   ended: boolean;
 
-  @Prop({ type: String, required: false })
+  @Prop({ type: Object, required: false })
   fields: Object;
 }
 

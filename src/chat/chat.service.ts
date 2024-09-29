@@ -295,7 +295,7 @@ export class ChatService {
       message: 'Wysłano formularz.',
     });
 
-    if (!chat.fields) chat.fields = {};
+    if (!chat.fields) chat.fields = getFields();
 
     await chat.save();
 
@@ -310,7 +310,7 @@ export class ChatService {
         };
 
         if (location === 'terytorium RP' && activityPerformencePlace === 'terytorium RP') {
-          msg.message = 'Jest ok.';
+          msg.message = 'Przyjęto formularz.';
         } else if (location === 'poza terytorium RP' && activityPerformencePlace === 'poza terytorium RP') {
           msg.message = 'Nie musisz odprowadzać podatku PCC, kiedy miejsce dokonania czynności cywilnoprawnej i miejsce położenia rzeczy lub miejsce wykonywania prawa majątkowego znajdują się poza terytorium RP.';
           chat.ended = true;

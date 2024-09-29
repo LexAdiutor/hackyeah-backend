@@ -7,5 +7,5 @@ export function getFields() {
     obj['P_21'] = '1';
     obj['P_22'] = '1';
 
-    console.log(obj);
+    return obj;
 }
