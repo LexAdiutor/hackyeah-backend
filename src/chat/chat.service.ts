@@ -194,6 +194,8 @@ export class ChatService {
         if (is_pcc) {
           chat.form = FORM2
           chat.formName = 'FORM2';
+        } else {
+          chat.ended = true;
         };
       }
 
@@ -286,10 +288,13 @@ export class ChatService {
           msg.message = 'Jest ok.';
         } else if (location === 'poza terytorium RP' && activityPerformencePlace === 'poza terytorium RP') {
           msg.message = 'Nie musisz odprowadzać podatku PCC, kiedy miejsce dokonania czynności cywilnoprawnej i miejsce położenia rzeczy lub miejsce wykonywania prawa majątkowego znajdują się poza terytorium RP.';
+          chat.ended = true;
         } else if (location === 'terytorium RP' && activityPerformencePlace === 'poza terytorium RP') {
           msg.message = 'Nie musisz odprowadzać podatku PCC, kiedy miejsce dokonania czynności cywilnoprawnej jest poza terytorium RP. A miejsce położenia rzeczy lub miejsce wykonywania prawa majątkowego znajduje na terytorium RP.';
+          chat.ended = true;
         } else {
           msg.message = 'Skontaktuj się z urzędem, aby dowiedzieć się czy musisz odprowadzić podatek PCC od tej czynności cywilnoprawnej.';
+          chat.ended = true;
         }
 
         chat.formMessages.push(msg);

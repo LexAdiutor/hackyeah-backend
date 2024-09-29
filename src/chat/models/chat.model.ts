@@ -39,6 +39,9 @@ export class Chat extends Document {
 
   @Prop({ type: Object, required: false })
   forms: Object;
+
+  @Prop({ type: Boolean, required: false })
+  ended: boolean;
 }
 
 export const ChatSchema = SchemaFactory.createForClass(Chat);
