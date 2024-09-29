@@ -186,4 +186,10 @@ export const FORM: (RadioQuestion | SelectQuestion | TextQuestion)[] = [
     required: false,
     vanishOn: 'country:POLSKA',
   },
+  {
+    name: 'num62',
+    type: 'text',
+    title: 'Ilość współsygntyriuszy po twojej stronie (np. współwłaścicieli zakupionego auta)',
+    required: true,
+  }
 ];

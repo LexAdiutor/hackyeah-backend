@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Chat, ChatType, Message, MessageSender } from './models/chat.model';
 import { Model } from 'mongoose';
@@ -160,26 +164,39 @@ export class ChatService {
       let is_pcc: Boolean = false;
       let backMessage = 'Brak odpowiedzi.';
 
-      const chat = await this.chatModel.findOne({ id: this.loadingMessage?.chatId }).exec();
+      const chat = await this.chatModel
+        .findOne({ id: this.loadingMessage?.chatId })
+        .exec();
 
       try {
         const response = await fetch(`${process.env.CORE_URL}/sendMichalMsg`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             msg_id: this.loadingMessage.chatId,
             message,
-            isFirstFormMessage
+            isFirstFormMessage,
           }),
         });
 
         const data = await response.json();
         is_pcc = data?.is_pcc === 'pcc';
+        console.log('data:', data);
+        console.log('chat:', chat);
 
         if (data?.fields && chat) {
-          data.fields.forEach(({name, value}) => chat.fields[name] = value);
+          data.fields?.forEach(({ name, value }) => {
+            console.log('fields:', name, value);
+            chat.fields[name] = String(value);
+          });
+          if (data?.fields.length > 0) {
+            backMessage = data?.final_message;
+          } else {
+            backMessage = data?.explanation;
+          }
+          console.log(chat.fields);
 
           chat.form = FORM;
           chat.formName = 'FORM1';
@@ -187,21 +204,23 @@ export class ChatService {
           await chat.save();
         }
 
-        if (data?.message)
-          backMessage = data.message;
-      } catch {
+        if (data?.message) backMessage = data.message;
+      } catch (e) {
+        console.log(e);
         if (chat) {
           if (type === ChatType.FORM)
             chat.formMessages.push({
               id: uuid(),
               sender: MessageSender.CHAT,
-              message: 'Przepraszamy, ale wystąpił błąd. Proszę spróbować ponownie później.',
+              message:
+                'Przepraszamy, ale wystąpił błąd. Proszę spróbować ponownie później.',
             });
           else
             chat.globalMessages.push({
               id: uuid(),
               sender: MessageSender.CHAT,
-              message: 'Przepraszamy, ale wystąpił błąd. Proszę spróbować ponownie później.',
+              message:
+                'Przepraszamy, ale wystąpił błąd. Proszę spróbować ponownie później.',
             });
           await chat.save();
         }
@@ -210,16 +229,13 @@ export class ChatService {
       }
 
       if (isFirstFormMessage) {
-        backMessage =
-          !is_pcc
-            ? 'Przepraszamy, ale nie wspieramy wypełniania wniosku dla tego podatku.'
-            : 'Zauważyłem, że musisz wypełnić formularz PCC3. Proszę o wypełnienie danych, które wyświetlają Ci się po prawej stronie.';
+        backMessage = !is_pcc
+          ? 'Przepraszamy, ale nie wspieramy wypełniania wniosku dla tego podatku.'
+          : 'Zauważyłem, że musisz wypełnić formularz PCC3. Proszę o wypełnienie danych, które wyświetlają Ci się po prawej stronie.';
         if (is_pcc) {
-          chat.form = FORM2
+          chat.form = FORM2;
           chat.formName = 'FORM2';
-        } else {
-          chat.ended = true;
-        };
+        }
       }
 
       if (!chat) return (this.loadingMessage = null);
@@ -285,7 +301,7 @@ export class ChatService {
 
     if (!form || !formName) throw new NotFoundException('Form not found');
 
-    chat.forms = {...(chat.forms ?? {}), [formName]: body};
+    chat.forms = { ...(chat.forms ?? {}), [formName]: body };
     chat.form = null;
     chat.formName = null;
 
@@ -309,16 +325,28 @@ export class ChatService {
           message: '',
         };
 
-        if (location === 'terytorium RP' && activityPerformencePlace === 'terytorium RP') {
+        if (
+          location === 'terytorium RP' &&
+          activityPerformencePlace === 'terytorium RP'
+        ) {
           msg.message = 'Przyjęto formularz.';
-        } else if (location === 'poza terytorium RP' && activityPerformencePlace === 'poza terytorium RP') {
-          msg.message = 'Nie musisz odprowadzać podatku PCC, kiedy miejsce dokonania czynności cywilnoprawnej i miejsce położenia rzeczy lub miejsce wykonywania prawa majątkowego znajdują się poza terytorium RP.';
+        } else if (
+          location === 'poza terytorium RP' &&
+          activityPerformencePlace === 'poza terytorium RP'
+        ) {
+          msg.message =
+            'Nie musisz odprowadzać podatku PCC, kiedy miejsce dokonania czynności cywilnoprawnej i miejsce położenia rzeczy lub miejsce wykonywania prawa majątkowego znajdują się poza terytorium RP.';
           chat.ended = true;
-        } else if (location === 'terytorium RP' && activityPerformencePlace === 'poza terytorium RP') {
-          msg.message = 'Nie musisz odprowadzać podatku PCC, kiedy miejsce dokonania czynności cywilnoprawnej jest poza terytorium RP. A miejsce położenia rzeczy lub miejsce wykonywania prawa majątkowego znajduje na terytorium RP.';
+        } else if (
+          location === 'terytorium RP' &&
+          activityPerformencePlace === 'poza terytorium RP'
+        ) {
+          msg.message =
+            'Nie musisz odprowadzać podatku PCC, kiedy miejsce dokonania czynności cywilnoprawnej jest poza terytorium RP. A miejsce położenia rzeczy lub miejsce wykonywania prawa majątkowego znajduje na terytorium RP.';
           chat.ended = true;
         } else {
-          msg.message = 'Skontaktuj się z urzędem, aby dowiedzieć się czy musisz odprowadzić podatek PCC od tej czynności cywilnoprawnej.';
+          msg.message =
+            'Skontaktuj się z urzędem, aby dowiedzieć się czy musisz odprowadzić podatek PCC od tej czynności cywilnoprawnej.';
           chat.ended = true;
         }
 
@@ -329,7 +357,7 @@ export class ChatService {
       }
       case 'FORM1': {
         chat.fields['P_1'] = body?.nip ?? body?.pesel;
-        switch(body?.entity) {
+        switch (body?.entity) {
           case 'Podmiot zobowiązany solidarnie do zapłaty podatku':
             chat.fields['P_2'] = '1';
             break;
@@ -347,8 +375,8 @@ export class ChatService {
             break;
           default:
             break;
-        };
-        switch(body?.taxprayerType) {
+        }
+        switch (body?.taxprayerType) {
           case 'podatnik niebędący osobą fizyczną':
             chat.fields['P_8'] = '1';
             break;
@@ -357,9 +385,13 @@ export class ChatService {
             break;
           default:
             break;
-        };
-        chat.fields['P_9'] = body?.fullname ?? `${body?.surname ?? ''}, ${body?.firstName ?? ''}, ${body?.birthDate ?? ''}`;
-        chat.fields['P_10'] = body?.shortName ?? `${body?.fathersFirstName ?? ''}, ${body?.mothersFirstName ?? ''}`;
+        }
+        chat.fields['P_9'] =
+          body?.fullname ??
+          `${body?.surname ?? ''}, ${body?.firstName ?? ''}, ${body?.birthDate ?? ''}`;
+        chat.fields['P_10'] =
+          body?.shortName ??
+          `${body?.fathersFirstName ?? ''}, ${body?.mothersFirstName ?? ''}`;
         chat.fields['P_11'] = body?.country ?? '';
         chat.fields['P_12'] = body?.province ?? '';
         chat.fields['P_13'] = body?.district ?? '';
@@ -369,8 +401,16 @@ export class ChatService {
         chat.fields['P_17'] = body?.apartmentNumber ?? '';
         chat.fields['P_18'] = body?.town ?? '';
         chat.fields['P_19'] = body?.zipCode ?? '';
+        chat.fields['P_62'] = body?.num62 ?? '';
 
-        await chat.save();
+        console.log(chat.fields);
+
+        await this.chatModel.updateOne(
+          { hash: reqHash },
+          { $set: { fields: chat.fields } },
+        );
+
+        return { success: true };
       }
       default:
         return { success: true };
