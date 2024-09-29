@@ -7,6 +7,7 @@ import { createHash } from 'crypto';
 import { Queue } from 'bull';
 import { QueueService } from './queue.service';
 import { FORM2 } from 'src/data/forms/form2';
+import { getFields } from 'src/data/forms/fields';
 
 @Injectable()
 export class ChatService {
@@ -167,6 +168,7 @@ export class ChatService {
           body: JSON.stringify({
             msg_id: this.loadingMessage.chatId,
             message,
+            isFirstFormMessage
           }),
         });
 
@@ -176,11 +178,18 @@ export class ChatService {
         if (data?.message)
           backMessage = data.message;
       } catch {
+        const chat = await this.chatModel.findOne({ id: this.loadingMessage?.chatId }).exec();
+        if (chat) {
+          chat.formMessages.push({
+            id: uuid(),
+            sender: MessageSender.CHAT,
+            message: 'Przepraszamy, ale wystąpił błąd. Proszę spróbować ponownie później.',
+          });
+          await chat.save();
+        }
         this.loadingMessage = null;
-        throw new ConflictException('Something went wrong');
+        return;
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 7000));
 
       const chat = await this.chatModel
         .findOne({ id: this.loadingMessage?.chatId })
@@ -301,6 +310,50 @@ export class ChatService {
         await chat.save();
 
         return { success: true };
+      }
+      case 'FORM1': {
+        const fields = getFields();
+
+        fields['P_1'] = body?.nip ?? body?.pesel;
+        switch(body?.entity) {
+          case 'Podmiot zobowiązany solidarnie do zapłaty podatku':
+            fields['P_2'] = '1';
+            break;
+          case 'Strona umowy zamiany':
+            fields['P_2'] = '2';
+            break;
+          case 'Wspólnik spółki cywilnej':
+            fields['P_2'] = '3';
+            break;
+          case 'Podmiot, o którym mowa w art. 9 pkt 10 lit. b ustawy (pożyczkobiorca)':
+            fields['P_2'] = '4';
+            break;
+          case 'Inny podmiot':
+            fields['P_2'] = '5';
+            break;
+          default:
+            break;
+        };
+        switch(body?.taxprayerType) {
+          case 'podatnik niebędący osobą fizyczną':
+            fields['P_8'] = '1';
+            break;
+          case 'osoba fizyczna':
+            fields['P_8'] = '2';
+            break;
+          default:
+            break;
+        };
+        fields['P_9'] = body?.fullname ?? `${body?.surname ?? ''}, ${body?.firstName ?? ''}, ${body?.birthDate ?? ''}`;
+        fields['P_10'] = body?.shortName ?? `${body?.fathersFirstName ?? ''}, ${body?.mothersFirstName ?? ''}`;
+        fields['P_11'] = body?.country ?? '';
+        fields['P_12'] = body?.province ?? '';
+        fields['P_13'] = body?.district ?? '';
+        fields['P_14'] = body?.commune ?? '';
+        fields['P_15'] = body?.street ?? '';
+        fields['P_16'] = body?.houseNumber ?? '';
+        fields['P_17'] = body?.apartmentNumber ?? '';
+        fields['P_18'] = body?.postalCode ?? '';
       }
       default:
         return { success: true };
