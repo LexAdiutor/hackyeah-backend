@@ -240,11 +240,10 @@ export class ChatService {
 
     if (!form || !formName) throw new NotFoundException('Form not found');
 
-    chat.forms = {...(chat.form ?? {}), [formName]: body};
-    await chat.save();
-
+    chat.forms = {...(chat.forms ?? {}), [formName]: body};
     chat.form = null;
     chat.formName = null;
+    await chat.save();
 
     return { success: true };
   }
