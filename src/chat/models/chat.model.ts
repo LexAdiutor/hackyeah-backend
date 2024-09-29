@@ -31,8 +31,14 @@ export class Chat extends Document {
   @Prop({ type: [Object], default: [], required: true })
   formMessages: Message[];
 
+  @Prop({ type: Object, required: false })
+  form: Object;
+
   @Prop({ type: String, required: false })
-  form: string;
+  formName: string;
+
+  @Prop({ type: Object, required: false })
+  forms: Object;
 }
 
 export const ChatSchema = SchemaFactory.createForClass(Chat);

@@ -6,6 +6,7 @@ import { v4 as uuid } from 'uuid';
 import { createHash } from 'crypto';
 import { Queue } from 'bull';
 import { QueueService } from './queue.service';
+import { FORM2 } from 'src/data/forms/form2';
 
 @Injectable()
 export class ChatService {
@@ -42,24 +43,54 @@ export class ChatService {
   }
 
   private async anyMessageWithId(chatId: string, messageId: string) {
-    return await this.chatModel
-      .findOne({
-        id: chatId,
-        'globalMessages.id': messageId,
-      })
-      .exec() || await this.chatModel.findOne({
+    return (
+      (await this.chatModel
+        .findOne({
+          id: chatId,
+          'globalMessages.id': messageId,
+        })
+        .exec()) ||
+      (await this.chatModel.findOne({
         id: chatId,
         'formMessages.id': messageId,
-      });
+      }))
+    );
   }
 
-  async sendMessage(reqHash: string | undefined, message: string, type: ChatType) {
+  async createHash() {
+    const id = await this.generateUniqueId();
+    const hash = this.hashSHA256(id);
+
+    await this.chatModel.create({
+      id,
+      hash,
+      globalMessages: [],
+      formMessages: [
+        {
+          id: uuid(),
+          sender: MessageSender.CHAT,
+          message: 'Proszę opisz swoją sytuację.',
+        },
+      ],
+      form: null,
+    });
+
+    return { hash };
+  }
+
+  async sendMessage(
+    reqHash: string | undefined,
+    message: string,
+    type: ChatType,
+  ) {
     let id = null;
     let msgId = null;
     let hash = null;
     let msg: Message;
+    let isFirstFormMessage = false;
 
     if (!reqHash || !(await this.existsHash(reqHash))) {
+      isFirstFormMessage = true;
       id = await this.generateUniqueId();
       hash = this.hashSHA256(id);
       msg = {
@@ -70,7 +101,7 @@ export class ChatService {
       const welcomeFormMsg: Message = {
         id: uuid(),
         sender: MessageSender.CHAT,
-        message: 'Proszę opisz swoją',
+        message: 'Proszę opisz swoją sytuację.',
       };
 
       while (true) {
@@ -78,10 +109,14 @@ export class ChatService {
         if (msg.id !== welcomeFormMsg.id) break;
       }
 
-      if (type === ChatType.GLOBAL)
-        await this.chatModel.create({ id, hash, globalMessages: [msg], formMessages: [welcomeFormMsg], form: '' });
-      else
-        await this.chatModel.create({ id, hash, globalMessages: [], formMessages: [welcomeFormMsg, msg], form: '' });
+      await this.chatModel.create({
+        id,
+        hash,
+        globalMessages: type === ChatType.GLOBAL ? [msg] : [],
+        formMessages:
+          type === ChatType.GLOBAL ? [welcomeFormMsg] : [welcomeFormMsg, msg],
+        form: null,
+      });
     } else {
       hash = reqHash;
       const chat = await this.chatModel
@@ -106,10 +141,10 @@ export class ChatService {
         message,
       };
 
-      if (type === ChatType.GLOBAL)
-        chat.globalMessages.push(msg);
-      else
-        chat.formMessages.push(msg);
+      if (chat.formMessages.length <= 1) isFirstFormMessage = true;
+
+      if (type === ChatType.GLOBAL) chat.globalMessages.push(msg);
+      else chat.formMessages.push(msg);
 
       await chat.save();
     }
@@ -121,11 +156,26 @@ export class ChatService {
       };
 
       // TODO: REMOVE AND REPLACE WITH REAL CORE JOB
+
+      const response = message.trim() === 'ok' ? 'PCC3' : 'NO';
+      let backMessage = 'każda wiadomość';
+
       await new Promise((resolve) => setTimeout(resolve, 7000));
 
       const chat = await this.chatModel
         .findOne({ id: this.loadingMessage?.chatId })
         .exec();
+
+      if (isFirstFormMessage) {
+        backMessage =
+          response === 'NO'
+            ? 'Przepraszamy, ale nie wspieramy wypełniania wniosku dla tego podatku.'
+            : 'Zauważyłem, że musisz wypełnić formularz PCC3. Proszę o wypełnienie danych, które wyświetlają Ci się po prawej stronie.';
+        if (response === 'PCC3') {
+          chat.form = FORM2
+          chat.formName = 'FORM2';
+        };
+      }
 
       if (!chat) return (this.loadingMessage = null);
 
@@ -138,13 +188,11 @@ export class ChatService {
       const chatMsg: Message = {
         id: chatMsgId,
         sender: MessageSender.CHAT,
-        message: 'Hello from chat',
+        message: backMessage,
       };
 
-      if (type === ChatType.GLOBAL)
-        chat.globalMessages.push(chatMsg);
-      else
-        chat.formMessages.push(chatMsg);
+      if (type === ChatType.GLOBAL) chat.globalMessages.push(chatMsg);
+      else chat.formMessages.push(chatMsg);
       await chat.save();
 
       this.loadingMessage = null;
@@ -159,9 +207,10 @@ export class ChatService {
     }
 
     return {
-      working:
-        !!(this.loadingMessage &&
-        this.hashSHA256(this.loadingMessage?.chatId ?? '') === reqHash),
+      working: !!(
+        this.loadingMessage &&
+        this.hashSHA256(this.loadingMessage?.chatId ?? '') === reqHash
+      ),
     };
   }
 
@@ -170,6 +219,33 @@ export class ChatService {
       throw new NotFoundException('Chat not found');
     }
 
-    return this.chatModel.findOne({ hash: reqHash }).select('-id').select('-_id').exec();
+    return this.chatModel
+      .findOne({ hash: reqHash })
+      .select('-id')
+      .select('-_id')
+      .exec();
+  }
+
+  async submitForm(reqHash: string, body: Record<string, string>) {
+    if (!reqHash || !(await this.existsHash(reqHash))) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const chat = await this.chatModel.findOne({ hash: reqHash }).exec();
+
+    if (!chat) throw new NotFoundException('Chat not found');
+
+    const form = chat.form;
+    const formName = chat.formName;
+
+    if (!form || !formName) throw new NotFoundException('Form not found');
+
+    chat.forms = {...(chat.form ?? {}), [formName]: body};
+    await chat.save();
+
+    chat.form = null;
+    chat.formName = null;
+
+    return { success: true };
   }
 }
